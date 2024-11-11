@@ -1,0 +1,82 @@
+version: python:3.9-slim
+
+services:
+  web:
+    build: ./django-ecom
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./django-ecom:/usr/src/app/
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=dbaa1_i7%*3r9-=z-+_mz4r-!qeed@(-a_r(g@k8jo8y3r27%m
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 ::1 3.81.37.6  # Include server IP here
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  celery:
+    build: ./django-ecom
+    command: celery --app=core worker --loglevel=info --logfile=logs/celery.log
+    volumes:
+      - ./django-ecom:/usr/src/app/
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=dbaa1_i7%*3r9-=z-+_mz4r-!qeed@(-a_r(g@k8jo8y3r27%m
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 ::1 3.81.37.6  # Same hosts as web service
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379/0
+    depends_on:
+      - web
+      - redis
+
+  redis:
+    image: redis:7-alpine
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf  # Mount your Nginx configuration file
+    ports:
+      - "80:80"  # Expose port 80 for Nginx
+    depends_on:
+      - web
+
+  nginx_exporter:
+    image: nginx/nginx-prometheus-exporter
+    ports:
+      - "9113:9113"
+    environment:
+      - NGINX_SERVER=nginx  # Address of the Nginx service; you don't need to specify the port
+    depends_on:
+      - nginx
+
+  celery_exporter:
+    image: danihodovic/celery-exporter
+    ports:
+      - "9808:9808"
+    command: --broker-url=redis://redis:6379/0
+    depends_on:
+      - redis
+      - celery
+

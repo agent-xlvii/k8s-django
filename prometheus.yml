@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s  # Default scrape interval
+
+scrape_configs:
+
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']  # Use the service name instead of the external IP
+
+  - job_name: 'celery_exporter'
+    static_configs:
+      - targets: ['celery_exporter:9808']  # Use the service name instead of the external IP
+
+  - job_name: 'nginx_exporter'
+    static_configs:
+      - targets: ['nginx_exporter:9113']  # Use the service name instead of the external IP
+

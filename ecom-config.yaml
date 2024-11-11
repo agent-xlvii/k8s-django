@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecom-config
+data:
+  SECRET_KEY: "nnamdi"
+  DEBUG: "True"
